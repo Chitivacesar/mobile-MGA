@@ -58,4 +58,36 @@ Join our community of developers creating universal apps.
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 # movil-mga
-# movil-mga
+
+## 🔧 Configuración para Desarrollo Móvil
+
+**IMPORTANTE:** Para que la app funcione en tu dispositivo móvil, debes usar la IP de tu computadora en lugar de `localhost`.
+
+### Pasos para configurar correctamente:
+
+1. **Obtener tu IP local:**
+   ```bash
+   # En Windows:
+   ipconfig | findstr "IPv4"
+   
+   # En Mac/Linux:
+   ifconfig | grep "inet "
+   ```
+
+2. **La configuración ya está actualizada** en `constants/config.ts` y `app.json` con tu IP actual: `172.20.10.5`
+
+3. **Si cambias de red WiFi,** actualiza la IP en estos archivos:
+   - `constants/config.ts` → `DEV_API_URL`
+   - `app.json` → `extra.apiUrl`
+
+### ⚠️ Solución al Error de Network
+
+Si ves "AxiosError: Network Error", significa que:
+- Tu backend no está corriendo en el puerto 3000
+- Tu dispositivo móvil no puede acceder a tu computadora
+- La IP configurada no es correcta
+
+**Soluciones:**
+1. ✅ Asegúrate de que el backend esté corriendo: `cd backend && npm start`
+2. ✅ Verifica que tanto tu computadora como tu dispositivo estén en la misma red WiFi
+3. ✅ Actualiza la IP si cambias de red

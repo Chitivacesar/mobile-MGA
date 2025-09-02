@@ -72,7 +72,8 @@ export class ApiService {
     try {
       console.log('=== SIMPLE LOGIN ===');
       console.log('Email:', correo);
-      console.log('Password:', contrasena);
+      console.log('Password length:', contrasena?.length);
+      console.log('Full API URL:', `${API_BASE_URL}/login`);
 
       const loginData = {
         correo,
@@ -83,11 +84,17 @@ export class ApiService {
       console.log('Making request to:', `${API_BASE_URL}/login`);
 
       const response = await axios.post('/login', loginData);
-      console.log('Server response:', response.data);
+      console.log('Server response status:', response.status);
+      console.log('Server response data:', response.data);
 
       return response.data;
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      console.error('=== LOGIN ERROR DETAILS ===');
+      console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Response status:', error.response?.status);
+      console.error('Response data:', error.response?.data);
+      console.error('Config URL:', error.config?.url);
       throw error;
     }
   }

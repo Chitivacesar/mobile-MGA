@@ -1,7 +1,8 @@
 import Constants from 'expo-constants';
 
-// Para desarrollo local
-const DEV_API_URL = 'http://localhost:3000/api';
+// Para desarrollo local - Usar IP de la máquina en lugar de localhost
+// Si estás en el mismo WiFi, usa la IP de tu computadora
+const DEV_API_URL = 'http://172.20.10.5:3000/api';
 
 // Para producción o si está configurado en las variables de entorno
 const EXPO_PUBLIC_API_BASE_URL = Constants.expoConfig?.extra?.apiUrl;

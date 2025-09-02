@@ -118,9 +118,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('Login failed:', response.message);
         return { success: false, message: response.message || 'Error al iniciar sesión' };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error in AuthContext:', error);
-      return { success: false, message: 'Error de conexión' };
+      
+      // Mensajes de error más específicos
+      let errorMessage = 'Error de conexión';
+      
+      if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+        errorMessage = 'No se puede conectar al servidor. Verifica tu conexión a internet y que el backend esté funcionando.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Credenciales incorrectas';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Error del servidor. Intenta de nuevo más tarde.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      return { success: false, message: errorMessage };
     } finally {
       setLoading(false);
     }
