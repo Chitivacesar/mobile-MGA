@@ -27,10 +27,10 @@ const ResetPasswordScreen = () => {
     // Verificar validez del token
     const verifyToken = async () => {
       try {
-        const response = await api.get(`/password-reset/verify-token/${token}`);
-        setTokenValid(response.data.valid);
-        if (!response.data.valid) {
-          Alert.alert('Error', response.data.message || 'Token inválido o expirado');
+        const response = await api.verifyResetToken(token);
+        setTokenValid(response.valid);
+        if (!response.valid) {
+          Alert.alert('Error', response.message || 'Token inválido o expirado');
         }
       } catch (error: any) {
         console.error('Error al verificar token:', error);
@@ -73,15 +73,12 @@ const ResetPasswordScreen = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/password-reset/reset-password', {
-        token: token,
-        newPassword: passwords.newPassword
-      });
+      const response = await api.resetPassword(token, passwords.newPassword);
 
-      if (response.data && response.data.success) {
+      if (response.success) {
         Alert.alert(
           'Éxito',
-          response.data.message || 'Contraseña restablecida correctamente',
+          response.message || 'Contraseña restablecida correctamente',
           [
             {
               text: 'OK',
@@ -90,7 +87,7 @@ const ResetPasswordScreen = () => {
           ]
         );
       } else {
-        Alert.alert('Error', response.data?.message || 'Error al restablecer la contraseña');
+        Alert.alert('Error', response.message || 'Error al restablecer la contraseña');
       }
     } catch (error: any) {
       console.error('Error en resetPassword:', error);

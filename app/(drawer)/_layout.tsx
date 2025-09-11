@@ -6,7 +6,7 @@ import { useAuth } from '@/shared/contexts/AuthContext';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { colors, spacing } from '@/constants/theme';
+import { colors, spacing, radii, typography, shadows } from '@/constants/theme';
 import RoleSelector from '@/shared/components/RoleSelector';
 
 function CustomDrawerContent(props: any) {
@@ -37,17 +37,8 @@ function CustomDrawerContent(props: any) {
              userRole === 'cliente' ? 'Cliente' : 'Usuario'}
           </Text>
         </View>
-        {/* Filtrar las pantallas para ocultar mi-perfil ya que tenemos un botón personalizado */}
-        <DrawerItemList 
-          {...props} 
-          itemStyle={(route: any) => {
-            // Ocultar mi-perfil del drawer ya que tenemos un botón personalizado
-            if (route.name === 'mi-perfil') {
-              return { display: 'none' };
-            }
-            return {};
-          }}
-        />
+        {/* Listado normal; ocultaremos 'mi-perfil' declarando la Screen con drawerItemStyle hidden */}
+        <DrawerItemList {...props} />
       </DrawerContentScrollView>
       
       {/* Mi Perfil - Justo arriba de Cerrar Sesión */}
@@ -83,10 +74,10 @@ export default function DrawerLayout() {
   const getScreenOptions = (allowedRoles: string[], screenName?: string) => {
     console.log(`getScreenOptions called for ${screenName}, userRole: ${userRole}`);
     
-    // Si es beneficiario, solo mostrar programación de clases y asistencia
+    // Si es beneficiario, mostrar dashboard, programación de clases y pagos
     if (userRole === 'beneficiario') {
       console.log(`Beneficiario detected, checking if ${screenName} should be shown`);
-      if (screenName === 'programacion-clases' || screenName === 'asistencia') {
+      if (screenName === 'dashboard' || screenName === 'programacion-clases' || screenName === 'pagos') {
         console.log(`Showing ${screenName} for beneficiario`);
         return {};
       }
@@ -96,10 +87,10 @@ export default function DrawerLayout() {
       };
     }
     
-    // Si es cliente, solo mostrar beneficiarios y pagos
+    // Si es cliente, mostrar dashboard y pagos
     if (userRole === 'cliente') {
       console.log(`Cliente detected, checking if ${screenName} should be shown`);
-      if (screenName === 'beneficiarios' || screenName === 'pagos') {
+      if (screenName === 'dashboard' || screenName === 'pagos') {
         console.log(`Showing ${screenName} for cliente`);
         return {};
       }
@@ -109,10 +100,10 @@ export default function DrawerLayout() {
       };
     }
     
-    // Si es profesor, solo mostrar programación de profesores y programación de clases
+    // Si es profesor, mostrar dashboard, programación de profesores, programación de clases y asistencia
     if (userRole === 'profesor') {
       console.log(`Profesor detected, checking if ${screenName} should be shown`);
-      if (screenName === 'programacion-profesores' || screenName === 'programacion-clases') {
+      if (screenName === 'dashboard' || screenName === 'programacion-profesores' || screenName === 'programacion-clases' || screenName === 'asistencia') {
         console.log(`Showing ${screenName} for profesor`);
         return {};
       }
@@ -137,29 +128,53 @@ export default function DrawerLayout() {
       <Drawer
         drawerContent={CustomDrawerContent}
         screenOptions={{
-          drawerActiveTintColor: colors.primary,
-          drawerInactiveTintColor: colors.textSecondary,
-          headerShown: true, // Mostrar el header nativo del drawer
+          drawerActiveTintColor: colors.primary, // #0455a2 - Color exacto de tu web
+          drawerInactiveTintColor: colors.text, // #333333 - Texto exacto de tu web
+          drawerActiveBackgroundColor: colors.hoverBackground, // rgba(124, 148, 39, 0.1) - Hover exacto
+          drawerItemStyle: {
+            borderRadius: radii.sm, // 8px - Igual a tu web
+            marginHorizontal: spacing.xs,
+            marginVertical: 2,
+          },
+          drawerLabelStyle: {
+            fontSize: typography.sizes.sm, // 14px - Igual a tu web
+            fontWeight: typography.weights.medium,
+            fontFamily: typography.fontFamily,
+          },
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.primary, // #0455a2 - Header exacto de tu web
+            elevation: 4,
+            shadowOpacity: 0.1,
+          },
+          headerTintColor: colors.white,
+          headerTitleStyle: {
+            fontSize: typography.sizes.lg,
+            fontWeight: typography.weights.semibold,
+            fontFamily: typography.fontFamily,
+          },
         }}
       >
+        {/* Ocultar la ruta mi-perfil declarando su Screen con estilo hidden */}
+        <Drawer.Screen
+          name="mi-perfil"
+          options={{
+            title: 'mi-perfil',
+            drawerItemStyle: { display: 'none' as const },
+          }}
+        />
+
+        {/* Dashboard - Primera pantalla para todos los roles */}
         <Drawer.Screen 
           name="dashboard" 
           options={{ 
             title: 'Dashboard', 
             drawerIcon: ({ color, size }) => (<MaterialIcons name="dashboard" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin', 'profesor', 'cliente'], 'dashboard')
+            ...getScreenOptions(['administrador', 'admin', 'profesor', 'beneficiario', 'cliente'], 'dashboard')
           }} 
         />
 
         {/* Configuración - Solo Admin */}
-        <Drawer.Screen 
-          name="configuracion/roles" 
-          options={{ 
-            title: 'Roles', 
-            drawerIcon: ({ color, size }) => (<MaterialIcons name="vpn-key" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin'], 'roles')
-          }} 
-        />
         <Drawer.Screen 
           name="configuracion/usuarios" 
           options={{ 
@@ -171,20 +186,20 @@ export default function DrawerLayout() {
 
         {/* Servicios Musicales - Admin y Profesores */}
         <Drawer.Screen 
-          name="servicios-musicales/profesores" 
-          options={{ 
-            title: 'Profesores', 
-            drawerIcon: ({ color, size }) => (<MaterialIcons name="people" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin'], 'profesores')
-          }} 
-        />
-        <Drawer.Screen 
           name="servicios-musicales/programacion-profesores" 
           options={{ 
             title: 'Programación de Profesores', 
             drawerIcon: ({ color, size }) => (<MaterialIcons name="schedule" color={color} size={size} />),
             ...getScreenOptions(['administrador', 'admin', 'profesor'], 'programacion-profesores')
           }} 
+        />
+        <Drawer.Screen
+          name="servicios-musicales/asistencia"
+          options={{
+            title: 'Asistencia',
+            drawerIcon: ({ color, size }) => (<MaterialIcons name="check-circle" color={color} size={size} />),
+            ...getScreenOptions(['administrador', 'admin', 'profesor'], 'asistencia')
+          }}
         />
         <Drawer.Screen 
           name="servicios-musicales/programacion-clases" 
@@ -194,54 +209,14 @@ export default function DrawerLayout() {
             ...getScreenOptions(['administrador', 'admin', 'profesor', 'beneficiario'], 'programacion-clases')
           }} 
         />
-        <Drawer.Screen 
-          name="servicios-musicales/cursos-matriculas" 
-          options={{ 
-            title: 'Cursos/Matrículas', 
-            drawerIcon: ({ color, size }) => (<MaterialIcons name="school" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin', 'profesor', 'beneficiario'], 'cursos-matriculas')
-          }} 
-        />
-        <Drawer.Screen 
-          name="servicios-musicales/aulas" 
-          options={{ 
-            title: 'Aulas', 
-            drawerIcon: ({ color, size }) => (<MaterialIcons name="meeting-room" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin', 'profesor'], 'aulas')
-          }} 
-        />
 
-        {/* Venta de Servicios - Admin, algunos para Cliente */}
+        {/* Venta de Servicios - Admin */}
         <Drawer.Screen 
-          name="venta-servicios/clientes" 
+          name="venta-servicios/ventas" 
           options={{ 
-            title: 'Clientes', 
-            drawerIcon: ({ color, size }) => (<MaterialIcons name="people" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin'], 'clientes')
-          }} 
-        />
-        <Drawer.Screen 
-          name="venta-servicios/beneficiarios" 
-          options={{ 
-            title: 'Beneficiarios', 
-            drawerIcon: ({ color, size }) => (<MaterialIcons name="school" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin', 'cliente'], 'beneficiarios')
-          }} 
-        />
-        <Drawer.Screen 
-          name="venta-servicios/venta-matriculas" 
-          options={{ 
-            title: 'Venta de Matrículas', 
+            title: 'Reporte de Ventas', 
             drawerIcon: ({ color, size }) => (<MaterialIcons name="shopping-cart" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin'], 'venta-matriculas')
-          }} 
-        />
-        <Drawer.Screen 
-          name="venta-servicios/venta-cursos" 
-          options={{ 
-            title: 'Venta de Cursos', 
-            drawerIcon: ({ color, size }) => (<MaterialIcons name="shopping-cart" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin'], 'venta-cursos')
+            ...getScreenOptions(['administrador', 'admin'], 'ventas')
           }} 
         />
         <Drawer.Screen 
@@ -249,15 +224,7 @@ export default function DrawerLayout() {
           options={{ 
             title: 'Pagos', 
             drawerIcon: ({ color, size }) => (<MaterialIcons name="payment" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin', 'cliente'], 'pagos')
-          }} 
-        />
-        <Drawer.Screen 
-          name="venta-servicios/asistencia" 
-          options={{ 
-            title: 'Asistencia', 
-            drawerIcon: ({ color, size }) => (<MaterialIcons name="assignment-turned-in" color={color} size={size} />),
-            ...getScreenOptions(['administrador', 'admin', 'profesor', 'beneficiario'], 'asistencia')
+            ...getScreenOptions(['administrador', 'admin', 'cliente', 'beneficiario'], 'pagos')
           }} 
         />
       </Drawer>
@@ -268,81 +235,103 @@ export default function DrawerLayout() {
 const styles = StyleSheet.create({
   drawerContainer: {
     flex: 1,
+    backgroundColor: colors.surface, // #ffffff - Fondo exacto de tu web
   },
   drawerContent: {
     flex: 1,
+    backgroundColor: colors.surface,
   },
   userInfo: {
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.border, // #e0e0e0 - Borde exacto
     alignItems: 'center',
+    backgroundColor: colors.surface,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary,
+    width: 64,
+    height: 64,
+    borderRadius: radii.round,
+    backgroundColor: colors.primary, // #0455a2 - Color exacto de tu web
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
+    ...shadows.elevation[4], // Sombra con color primario
   },
   avatarText: {
     color: colors.white,
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.semibold,
+    fontFamily: typography.fontFamily,
   },
   userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text, // #333333 - Texto exacto de tu web
     marginBottom: spacing.xs,
+    fontFamily: typography.fontFamily,
   },
   userRole: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary, // #666666 - Color exacto de tu web
+    fontFamily: typography.fontFamily,
+    fontWeight: typography.weights.medium,
   },
   logoutContainer: {
     padding: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: colors.surface,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.error,
-    padding: spacing.sm,
-    borderRadius: 6,
+    backgroundColor: '#dc2626', // Color de error más suave
+    padding: 12,
+    borderRadius: 8, // Bordes más redondeados como Material-UI
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   logoutText: {
     color: colors.white,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     marginLeft: spacing.sm,
+    fontFamily: 'System',
   },
   miPerfilContainer: {
     padding: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#e0e0e0',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: colors.surface,
   },
   miPerfilButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
-    padding: spacing.sm,
-    borderRadius: 6,
+    backgroundColor: colors.surface,
+    padding: 12,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: '#0455a2', // Color primario de la web
+    shadowColor: '#0455a2',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   miPerfilText: {
-    color: colors.primary,
+    color: '#0455a2', // Color primario de la web
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     marginLeft: spacing.sm,
+    fontFamily: 'System',
   },
 });
 

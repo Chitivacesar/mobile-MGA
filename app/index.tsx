@@ -24,6 +24,7 @@ export default function Index() {
 
   if (isAuthenticated) {
     console.log('User is authenticated, redirecting to dashboard...');
+    // Redirigir al dashboard para todos los roles
     return <Redirect href="/(drawer)/dashboard" />;
   }
 

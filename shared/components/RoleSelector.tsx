@@ -22,10 +22,20 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
-  // Solo mostrar si el usuario tiene más de 2 roles
-  if (!user?.todosLosRoles || user.todosLosRoles.length <= 2) {
+  // Solo mostrar si el usuario tiene más de 1 rol (múltiples roles)
+  console.log('RoleSelector: Checking user roles:', {
+    userExists: !!user,
+    todosLosRoles: user?.todosLosRoles,
+    rolesCount: user?.todosLosRoles?.length || 0,
+    userName: user?.nombre
+  });
+  
+  if (!user?.todosLosRoles || user.todosLosRoles.length <= 1) {
+    console.log('RoleSelector: Not showing selector, insufficient roles');
     return null;
   }
+  
+  console.log('RoleSelector: Showing selector for user with multiple roles');
 
   const currentRoleId = getCurrentRoleId();
 

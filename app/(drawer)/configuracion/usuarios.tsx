@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { colors } from '@/constants/theme';
+import { View, StyleSheet, TextInput } from 'react-native';
+import { colors, spacing, typography, radii, shadows } from '@/constants/theme';
 import CardList from '@/components/CardList';
+import RefreshButton from '@/components/RefreshButton';
 import { api } from '@/shared/services/api';
 
 const UsuariosScreen = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   console.log('UsuariosScreen: Rendering with', data.length, 'usuarios, loading:', loading);
 
@@ -108,12 +110,26 @@ const UsuariosScreen = () => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar en usuarios..."
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            placeholderTextColor={colors.textSecondary}
+          />
+          <RefreshButton onPress={fetchData} loading={loading} />
+        </View>
+      </View>
+      
       <CardList
         data={data}
         columns={columns}
         loading={loading}
-        searchPlaceholder="Buscar en usuarios..."
         emptyMessage="No hay usuarios disponibles"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
       />
     </View>
   );
@@ -123,6 +139,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    ...shadows.elevation[2],
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radii.sm,
+    padding: 12,
+    fontSize: typography.sizes.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.text,
+    fontFamily: typography.fontFamily,
+    ...shadows.elevation[1],
   },
 });
 

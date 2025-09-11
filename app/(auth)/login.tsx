@@ -91,8 +91,13 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         <View style={styles.logoContainer}>
-          <View style={styles.logoPlaceholder}>
-            <Text style={styles.logoText}>MGA</Text>
+          <View style={styles.logoImageWrapper}>
+            <Image
+              // Logo del app ya existente en el proyecto
+              source={require('@/assets/images/icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.appTitle}>Sistema de Gestión Musical</Text>
           <Text style={styles.subtitle}>Iniciar Sesión</Text>
@@ -183,19 +188,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  logoPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary,
+  logoImageWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
+    overflow: 'hidden',
   },
-  logoText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.white,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   appTitle: {
     fontSize: 20,

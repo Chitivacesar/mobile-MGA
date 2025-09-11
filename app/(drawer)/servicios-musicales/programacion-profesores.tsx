@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { colors, spacing } from '@/constants/theme';
+import { View, StyleSheet, Text, TextInput } from 'react-native';
+import { colors, spacing, typography, radii, shadows } from '@/constants/theme';
 import CardList from '@/components/CardList';
+import RefreshButton from '@/components/RefreshButton';
+import HorariosProfesorModal from '@/components/HorariosProfesorModal';
 import { api } from '@/shared/services/api';
 import { useAuth } from '@/shared/contexts/AuthContext';
 
@@ -9,25 +11,23 @@ const ProgramacionProfesoresScreen = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedProfesor, setSelectedProfesor] = useState('');
+  const [selectedHorarios, setSelectedHorarios] = useState<any[]>([]);
   const { user } = useAuth();
 
   console.log('ProgramacionProfesoresScreen: Rendering with', data.length, 'programaciones, loading:', loading, 'user role:', user?.rol?.nombre);
 
-  const columns = user?.rol?.nombre?.toLowerCase() === 'profesor' ? [
-    { key: 'dia', label: 'Día' },
-    { key: 'horaInicio', label: 'Inicio' },
-    { key: 'horaFin', label: 'Fin' },
-  ] : [
+  const columns = [
     { key: 'profesor', label: 'Profesor' },
-    { key: 'dia', label: 'Día' },
-    { key: 'horaInicio', label: 'Inicio' },
-    { key: 'horaFin', label: 'Fin' },
+    { key: 'totalHorarios', label: 'Horarios' },
   ];
 
   useEffect(() => {
     console.log('ProgramacionProfesoresScreen: useEffect triggered, fetching data...');
     fetchData();
-  }, []);
+  }, [user]);
 
   const fetchData = async () => {
     try {
@@ -53,8 +53,11 @@ const ProgramacionProfesoresScreen = () => {
       
       console.log('ProgramacionProfesoresScreen: Programaciones list:', programacionesList);
       
-      let processedData = [];
-
+      // Agrupar por profesor
+      const profesoresMap = new Map();
+      
+      let filteredProgramaciones = programacionesList;
+      
       if (user?.rol?.nombre?.toLowerCase() === 'beneficiario') {
         // Para beneficiarios, filtrar solo las programaciones asociadas
         console.log('ProgramacionProfesoresScreen: Beneficiario detected, filtering programaciones...');
@@ -79,57 +82,96 @@ const ProgramacionProfesoresScreen = () => {
         console.log('ProgramacionProfesoresScreen: Programaciones asociadas:', programacionesAsociadas);
 
         // Filtrar programaciones de profesores
-        processedData = programacionesList
-          .filter((prog: any) => programacionesAsociadas.includes(prog._id))
-          .flatMap((prog: any) => {
-            if (!prog.horariosPorDia || !Array.isArray(prog.horariosPorDia)) return [];
-            
-            return prog.horariosPorDia.map((horario: any) => ({
-              profesor: prog.profesor?.nombres 
-                ? `${prog.profesor.nombres} ${prog.profesor.apellidos}`
-                : 'N/A',
-              dia: horario.dia || 'N/A',
-              horaInicio: horario.horaInicio || 'N/A',
-              horaFin: horario.horaFin || 'N/A',
-            }));
-          });
+        filteredProgramaciones = programacionesList.filter((prog: any) => programacionesAsociadas.includes(prog._id));
       } else if (user?.rol?.nombre?.toLowerCase() === 'profesor') {
-        // Para profesores, filtrar solo su propia programación
-        console.log('ProgramacionProfesoresScreen: Profesor detected, filtering own programaciones...');
-        const profesorId = user.id;
-        
-        console.log('ProgramacionProfesoresScreen: Profesor ID:', profesorId);
+        // Para profesores, usar el mismo filtro robusto que en Programación de Clases
+        console.log('ProgramacionProfesoresScreen: 🎯 ENTRANDO AL FILTRO DE PROFESOR');
+        console.log('ProgramacionProfesoresScreen: Filtering for profesor with user data:', {
+          id: user.id,
+          nombre: user.nombre,
+          apellido: user.apellido,
+          role: user?.rol?.nombre
+        });
         
         // Filtrar solo las programaciones del profesor logueado
-        processedData = programacionesList
-          .filter((prog: any) => prog.profesor?._id === profesorId)
-          .flatMap((prog: any) => {
-            if (!prog.horariosPorDia || !Array.isArray(prog.horariosPorDia)) return [];
-            
-            return prog.horariosPorDia.map((horario: any) => ({
+        filteredProgramaciones = programacionesList.filter((prog: any) => {
+          const profesorData = prog.profesor;
+          
+          if (!profesorData) {
+            console.log('ProgramacionProfesoresScreen: No profesor data found, excluding this programacion');
+            return false;
+          }
+          
+          // Datos del profesor de la programación
+          const profesorId = profesorData._id || profesorData.id;
+          const profesorFullName = `${profesorData.nombres || profesorData.nombre} ${profesorData.apellidos || profesorData.apellido}`;
+          const userFullName = `${user.nombre} ${user.apellido}`;
+          
+          // Solo usar ID y nombre como criterios seguros
+          const matchesId = profesorId && profesorId === user.id;
+          const matchesName = profesorFullName.toLowerCase().trim() === userFullName.toLowerCase().trim();
+          
+          // Filtro conservador: Solo ID o nombre exacto
+          const isAssigned = matchesId || matchesName;
+          
+          console.log('🔍 PROFESOR PROGRAMACION COMPARISON:', {
+            profesorName: profesorFullName,
+            userName: userFullName,
+            profesorId: profesorId,
+            userId: user.id,
+            matchesId: matchesId,
+            matchesName: matchesName,
+            FINAL_RESULT: isAssigned
+          });
+          
+          if (isAssigned) {
+            console.log('ProgramacionProfesoresScreen: ✅ PROGRAMACION INCLUIDA - Asignada al profesor logueado');
+          } else {
+            console.log('ProgramacionProfesoresScreen: ❌ PROGRAMACION EXCLUIDA - No asignada al profesor logueado');
+          }
+          
+          return isAssigned;
+        });
+        
+        console.log('ProgramacionProfesoresScreen: Filtered programaciones for profesor:', filteredProgramaciones.length);
+      }
+      
+      // Procesar y agrupar por profesor
+      filteredProgramaciones.forEach((prog: any) => {
+        const profesorNombre = prog.profesor?.nombres 
+          ? `${prog.profesor.nombres} ${prog.profesor.apellidos}`
+          : prog.profesor?.nombre 
+          ? `${prog.profesor.nombre} ${prog.profesor.apellido}`
+          : 'N/A';
+        
+        if (!profesoresMap.has(profesorNombre)) {
+          profesoresMap.set(profesorNombre, {
+            profesor: profesorNombre,
+            horarios: [],
+            totalHorarios: 0
+          });
+        }
+        
+        const profesorData = profesoresMap.get(profesorNombre);
+        
+        if (prog.horariosPorDia && Array.isArray(prog.horariosPorDia)) {
+          prog.horariosPorDia.forEach((horario: any) => {
+            profesorData.horarios.push({
               dia: horario.dia || 'N/A',
               horaInicio: horario.horaInicio || 'N/A',
-              horaFin: horario.horaFin || 'N/A',
-            }));
+              horaFin: horario.horaFin || 'N/A'
+            });
+            profesorData.totalHorarios++;
           });
-        
-        console.log('ProgramacionProfesoresScreen: Filtered programaciones for profesor:', processedData.length);
-      } else {
-        // Para otros roles (admin), mostrar todas las programaciones
-        console.log('ProgramacionProfesoresScreen: Admin role detected, showing all programaciones...');
-        processedData = programacionesList.flatMap((prog: any) => {
-          if (!prog.horariosPorDia || !Array.isArray(prog.horariosPorDia)) return [];
-          
-          return prog.horariosPorDia.map((horario: any) => ({
-            profesor: prog.profesor?.nombres 
-              ? `${prog.profesor.nombres} ${prog.profesor.apellidos}`
-              : 'N/A',
-            dia: horario.dia || 'N/A',
-            horaInicio: horario.horaInicio || 'N/A',
-            horaFin: horario.horaFin || 'N/A',
-          }));
-        });
-      }
+        }
+      });
+      
+      // Convertir a array y formatear para mostrar
+      const processedData = Array.from(profesoresMap.values()).map(profesorData => ({
+        profesor: profesorData.profesor,
+        totalHorarios: profesorData.totalHorarios,
+        horarios: profesorData.horarios // Mantener horarios para el modal
+      }));
 
       console.log('ProgramacionProfesoresScreen: Processed data:', processedData);
       setData(processedData);
@@ -143,11 +185,45 @@ const ProgramacionProfesoresScreen = () => {
     }
   };
 
+  const handleCardPress = (item: any) => {
+    console.log('ProgramacionProfesoresScreen: Card pressed for profesor:', item.profesor);
+    setSelectedProfesor(item.profesor);
+    setSelectedHorarios(item.horarios || []);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedProfesor('');
+    setSelectedHorarios([]);
+  };
+
   if (error) {
     console.log('ProgramacionProfesoresScreen: Showing error state:', error);
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar en programación de profesores..."
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              placeholderTextColor={colors.textSecondary}
+            />
+            <RefreshButton onPress={fetchData} loading={loading} />
+          </View>
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+        
+        <HorariosProfesorModal
+          visible={modalVisible}
+          onClose={closeModal}
+          profesor={selectedProfesor}
+          horarios={selectedHorarios}
+        />
       </View>
     );
   }
@@ -156,11 +232,32 @@ const ProgramacionProfesoresScreen = () => {
   if (user?.rol?.nombre?.toLowerCase() === 'beneficiario' && data.length === 0 && !loading) {
     console.log('ProgramacionProfesoresScreen: Beneficiario with no programaciones, showing empty state');
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>No hay programaciones disponibles</Text>
-        <Text style={styles.emptyText}>
-          No tienes programaciones de clases asignadas actualmente.
-        </Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar en programación de profesores..."
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              placeholderTextColor={colors.textSecondary}
+            />
+            <RefreshButton onPress={fetchData} loading={loading} />
+          </View>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No hay programaciones disponibles</Text>
+          <Text style={styles.emptyText}>
+            No tienes programaciones de clases asignadas actualmente.
+          </Text>
+        </View>
+        
+        <HorariosProfesorModal
+          visible={modalVisible}
+          onClose={closeModal}
+          profesor={selectedProfesor}
+          horarios={selectedHorarios}
+        />
       </View>
     );
   }
@@ -169,16 +266,38 @@ const ProgramacionProfesoresScreen = () => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar en programación de profesores..."
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            placeholderTextColor={colors.textSecondary}
+          />
+          <RefreshButton onPress={fetchData} loading={loading} />
+        </View>
+      </View>
+      
       <CardList
         data={data}
         columns={columns}
         loading={loading}
-        searchPlaceholder="Buscar en programación de profesores..."
         emptyMessage={
           user?.rol?.nombre?.toLowerCase() === 'profesor' 
             ? "No tienes programación disponible" 
             : "No hay programación de profesores disponible"
         }
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onCardPress={handleCardPress}
+      />
+      
+      <HorariosProfesorModal
+        visible={modalVisible}
+        onClose={closeModal}
+        profesor={selectedProfesor}
+        horarios={selectedHorarios}
       />
     </View>
   );
@@ -188,6 +307,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    ...shadows.elevation[2],
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radii.sm,
+    padding: 12,
+    fontSize: typography.sizes.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.text,
+    fontFamily: typography.fontFamily,
+    ...shadows.elevation[1],
   },
   errorContainer: {
     flex: 1,
@@ -222,5 +365,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProgramacionProfesoresScreen;
-
-

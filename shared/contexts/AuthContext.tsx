@@ -7,6 +7,8 @@ interface User {
   nombre: string;
   apellido: string;
   correo: string;
+  numeroDocumento?: string;
+  tipoDocumento?: string;
   rol?: {
     id: string;
     nombre: string;
@@ -45,42 +47,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const isAuthenticated = !!user && !!token;
-  console.log('AuthContext: isAuthenticated updated:', isAuthenticated, 'user:', !!user, 'token:', !!token);
 
   const getUserRole = (): string | null => {
-    const role = user?.rol?.nombre?.toLowerCase() || null;
-    console.log('AuthContext: getUserRole called, user:', user?.nombre, 'role:', role);
-    return role;
+    return user?.rol?.nombre?.toLowerCase() || null;
   };
 
   const getCurrentRoleId = (): string | null => {
-    const roleId = user?.rol?.id || null;
-    console.log('AuthContext: getCurrentRoleId called, roleId:', roleId);
-    return roleId;
+    return user?.rol?.id || null;
   };
 
   const checkAuthState = async () => {
     try {
       setLoading(true);
-      console.log('Checking auth state...');
       
       const storedToken = await AsyncStorage.getItem('token');
       const storedUser = await AsyncStorage.getItem('user');
 
-      console.log('Stored token:', storedToken ? 'exists' : 'null');
-      console.log('Stored user:', storedUser ? 'exists' : 'null');
-
       if (storedToken && storedUser) {
         const userData = JSON.parse(storedUser);
-        console.log('Restoring user session:', userData.nombre);
         
+        console.log('AuthContext: Setting token from storage:', storedToken ? storedToken.substring(0, 20) + '...' : 'null');
         setToken(storedToken);
         setUser(userData);
         apiService.setToken(storedToken);
-        
-        console.log('Session restored successfully');
-      } else {
-        console.log('No stored session found');
+        console.log('AuthContext: Token configured in API service from storage');
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
@@ -92,16 +82,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (correo: string, contrasena: string) => {
     try {
-      console.log('=== AUTH CONTEXT LOGIN ===');
       setLoading(true);
       
       const response: any = await apiService.login(correo, contrasena);
-      console.log('API Service response:', response);
 
       if (response.success && response.usuario && response.token) {
-        console.log('Login successful!');
-        
         // Configurar el token en el servicio
+        console.log('AuthContext: Setting token from login:', response.token ? response.token.substring(0, 20) + '...' : 'null');
         apiService.setToken(response.token);
         
         // Guardar en AsyncStorage
@@ -111,21 +98,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Actualizar el estado
         setUser(response.usuario);
         setToken(response.token);
+        console.log('AuthContext: Token configured in API service from login');
         
-        console.log('User and token set successfully');
         return { success: true };
       } else {
-        console.log('Login failed:', response.message);
         return { success: false, message: response.message || 'Error al iniciar sesión' };
       }
     } catch (error: any) {
-      console.error('Login error in AuthContext:', error);
+      console.error('Login error:', error);
       
       // Mensajes de error más específicos
       let errorMessage = 'Error de conexión';
       
-      if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Timeout: El servidor está tardando mucho en responder. Verifica que el backend esté funcionando y tu conexión a internet.';
+      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
         errorMessage = 'No se puede conectar al servidor. Verifica tu conexión a internet y que el backend esté funcionando.';
+      } else if (error.code === 'ENOTFOUND' || error.message?.includes('getaddrinfo ENOTFOUND')) {
+        errorMessage = 'No se puede encontrar el servidor. Verifica la URL del backend en la configuración.';
+      } else if (error.code === 'ECONNREFUSED') {
+        errorMessage = 'Conexión rechazada. El servidor no está disponible en la URL configurada.';
       } else if (error.response?.status === 401) {
         errorMessage = 'Credenciales incorrectas';
       } else if (error.response?.status === 500) {

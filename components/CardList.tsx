@@ -1,26 +1,27 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, ActivityIndicator } from 'react-native';
-import { colors, spacing, radii } from '@/constants/theme';
+import { View, Text, StyleSheet, TextInput, FlatList, ActivityIndicator, ScrollView } from 'react-native';
+import { colors, spacing, radii, typography, shadows } from '@/constants/theme';
 import DataCard from './DataCard';
 
 interface CardListProps {
   data: any[];
   columns: { key: string; label: string }[];
   loading?: boolean;
-  searchPlaceholder?: string;
   emptyMessage?: string;
   onCardPress?: (item: any) => void;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
 const CardList: React.FC<CardListProps> = ({
   data,
   columns,
   loading = false,
-  searchPlaceholder = 'Buscar...',
   emptyMessage = 'No hay datos disponibles',
-  onCardPress
+  onCardPress,
+  searchTerm = '',
+  onSearchChange
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -104,36 +105,6 @@ const CardList: React.FC<CardListProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Barra de búsqueda */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder={searchPlaceholder}
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-          placeholderTextColor={colors.textSecondary}
-        />
-      </View>
-
-      {/* Controles de paginación */}
-      <View style={styles.paginationContainer}>
-        <Text style={styles.rowsLabel}>Filas:</Text>
-        <View style={styles.rowsButtons}>
-          {[5, 10, 20, 50].map(rows => (
-            <Text
-              key={rows}
-              style={[
-                styles.rowsButton,
-                rowsPerPage === rows && styles.rowsButtonActive
-              ]}
-              onPress={() => handleRowsPerPageChange(rows)}
-            >
-              {rows}
-            </Text>
-          ))}
-        </View>
-      </View>
-
       {/* Lista de tarjetas */}
       {paginatedData.length > 0 ? (
         <FlatList
@@ -161,8 +132,13 @@ const CardList: React.FC<CardListProps> = ({
           >
             Anterior
           </Text>
-          
-          <View style={styles.pageNumbers}>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.pageNumbers}
+            style={styles.pageNumbersScroll}
+          >
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <Text
                 key={page}
@@ -175,8 +151,8 @@ const CardList: React.FC<CardListProps> = ({
                 {page}
               </Text>
             ))}
-          </View>
-          
+          </ScrollView>
+
           <Text
             style={[
               styles.pageButton,
@@ -195,55 +171,7 @@ const CardList: React.FC<CardListProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  searchContainer: {
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  searchInput: {
-    backgroundColor: colors.backgroundSecondary || '#f5f5f5',
-    borderRadius: radii.sm,
-    padding: spacing.sm,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.textPrimary,
-  },
-  paginationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  rowsLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  rowsButtons: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  rowsButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  rowsButtonActive: {
-    borderColor: colors.primary,
-    color: colors.primary,
-    backgroundColor: colors.primaryLight || '#f0f8ff',
+    backgroundColor: colors.background, // #f5f7fa - Fondo exacto de tu web
   },
   listContainer: {
     padding: spacing.md,
@@ -253,22 +181,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
+    backgroundColor: colors.background,
   },
   emptyText: {
-    fontSize: 16,
-    color: colors.textSecondary,
+    fontSize: typography.sizes.lg,
+    color: colors.textSecondary, // #666666 - Color exacto de tu web
     textAlign: 'center',
+    fontFamily: typography.fontFamily,
+    fontWeight: typography.weights.medium,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
+    backgroundColor: '#f5f7fa',
   },
   loadingText: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: '#555555',
     marginTop: spacing.sm,
+    fontFamily: 'System',
   },
   paginationControls: {
     flexDirection: 'row',
@@ -277,36 +210,69 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#e0e0e0',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   pageButton: {
     fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    color: '#0455a2', // Color primario de la web
+    fontWeight: '600',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   pageButtonDisabled: {
-    color: colors.disabled,
+    color: '#999999',
+    backgroundColor: '#f5f5f5',
+    borderColor: '#e0e0e0',
+  },
+  pageNumbersScroll: {
+    flexGrow: 1,
+    marginHorizontal: spacing.sm,
   },
   pageNumbers: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   pageNumber: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.xs,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border,
-    fontSize: 14,
-    color: colors.textSecondary,
+    borderColor: '#e0e0e0',
+    fontSize: 13,
+    color: '#555555',
     fontWeight: '500',
+    backgroundColor: colors.surface,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    minWidth: 32,
+    textAlign: 'center',
   },
   pageNumberActive: {
-    borderColor: colors.primary,
-    color: colors.primary,
-    backgroundColor: colors.primaryLight || '#f0f8ff',
+    borderColor: '#0455a2',
+    color: colors.surface,
+    backgroundColor: '#0455a2',
+    shadowColor: '#0455a2',
+    shadowOpacity: 0.3,
+    fontWeight: '600',
   },
 });
 

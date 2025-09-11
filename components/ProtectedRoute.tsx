@@ -31,8 +31,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         const userRole = getUserRole();
         console.log('ProtectedRoute: Rol del usuario:', userRole, 'Roles permitidos:', allowedRoles);
         if (!userRole || !allowedRoles.includes(userRole)) {
-          // Redirigir a una página de acceso denegado o dashboard general
-          console.log('ProtectedRoute: Rol no permitido, redirigiendo a dashboard');
+          // Redirigir a una página de acceso denegado o pantalla apropiada
+          console.log('ProtectedRoute: Rol no permitido, redirigiendo a pantalla apropiada');
+          // Redirigir al dashboard para todos los roles
           router.replace('/(drawer)/dashboard');
           return;
         }

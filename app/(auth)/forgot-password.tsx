@@ -22,18 +22,16 @@ const ForgotPasswordScreen = () => {
     setMessage('');
 
     try {
-      const response = await api.post('/password-reset/forgot-password', {
-        email: email.trim()
-      });
+      const response = await api.forgotPassword(email.trim());
 
-      if (response.data && response.data.success) {
-        setMessage(response.data.message || 'Se ha enviado un enlace de recuperación a tu correo electrónico.');
+      if (response.success) {
+        setMessage(response.message || 'Se ha enviado un enlace de recuperación a tu correo electrónico.');
         // Redirigir al login después de 3 segundos
         setTimeout(() => {
           router.replace('/(auth)/login');
         }, 3000);
       } else {
-        setError(response.data?.message || 'Error al procesar la solicitud.');
+        setError(response.message || 'Error al procesar la solicitud.');
       }
     } catch (err: any) {
       console.error('Error en forgotPassword:', err);

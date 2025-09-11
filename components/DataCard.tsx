@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, radii } from '@/constants/theme';
+import { colors, spacing, radii, typography, shadows } from '@/constants/theme';
 
 interface DataCardProps {
   title?: string;
@@ -52,57 +52,60 @@ const DataCard: React.FC<DataCardProps> = ({ title, data, onPress, isSelected = 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.md,
+    borderRadius: radii.sm, // 8px - Igual a tu web
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderColor: colors.border, // #e0e0e0 - Borde exacto de tu web
+    ...shadows.elevation[2],
+    transform: [{ scale: 1 }],
   },
   selectedCard: {
-    borderColor: colors.primary,
-    backgroundColor: '#f0f8ff',
+    borderColor: colors.primary, // #0455a2 - Color primario exacto
+    backgroundColor: colors.activeBackground, // rgba(4, 85, 162, 0.1)
+    ...shadows.elevation[4], // Sombra con color primario
   },
   pressableCard: {
-    shadowColor: '#000',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primary,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold,
+    color: colors.primary, // #0455a2 - Color primario exacto de tu web
     marginBottom: spacing.sm,
+    fontFamily: typography.fontFamily,
   },
   dataContainer: {
-    gap: spacing.xs,
+    gap: 8,
   },
   dataRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
+    alignItems: 'flex-start',
+    paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#f0f0f0', // Líneas más sutiles
   },
   label: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary, // #666666 - Color exacto de tu web
+    fontWeight: typography.weights.semibold,
     flex: 1,
+    fontFamily: typography.fontFamily,
+    marginRight: spacing.xs,
   },
   value: {
-    fontSize: 14,
-    color: colors.textPrimary,
-    fontWeight: '400',
+    fontSize: typography.sizes.sm,
+    color: colors.text, // #333333 - Texto exacto de tu web
+    fontWeight: typography.weights.normal,
     flex: 2,
     textAlign: 'right',
+    fontFamily: typography.fontFamily,
+    flexWrap: 'wrap',
   },
 });
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
-import { colors, spacing, radii } from '@/constants/theme';
+import { colors, spacing, radii, typography, shadows } from '@/constants/theme';
 
 interface Column {
   key: string;
