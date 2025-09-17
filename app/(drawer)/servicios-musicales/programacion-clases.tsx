@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput } from 'react-native';
-import { colors, spacing, typography, radii, shadows } from '@/constants/theme';
 import CardList from '@/components/CardList';
-import RefreshButton from '@/components/RefreshButton';
 import HorariosModal from '@/components/HorariosModal';
-import { api } from '@/shared/services/api';
+import RefreshButton from '@/components/RefreshButton';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/shared/contexts/AuthContext';
+import { api } from '@/shared/services/api';
+import { Stack } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 const ProgramacionClasesScreen = () => {
   const { user, getUserRole } = useAuth();
@@ -35,7 +36,7 @@ const ProgramacionClasesScreen = () => {
     try {
       console.log('ProgramacionClasesScreen: Starting to fetch programacion de clases...');
       setLoading(true);
-      const response = await api.get('/programacion_de_clases');
+      const response = await api.get('/api/programacion_de_clases');
       
       console.log('ProgramacionClasesScreen: API response received:', response);
       
@@ -251,43 +252,60 @@ const ProgramacionClasesScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar en programación de clases..."
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            placeholderTextColor={colors.textSecondary}
-          />
-          <RefreshButton onPress={fetchData} loading={loading} />
+    <>
+      <Stack.Screen 
+        options={{
+          title: 'Programación de Clases',
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.primary,
+          },
+          headerTintColor: colors.white,
+          headerTitleStyle: {
+            fontSize: typography.sizes.lg,
+            fontWeight: '600' as const,
+            fontFamily: typography.fontFamily,
+          },
+        }}
+      />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar en programación de clases..."
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              placeholderTextColor={colors.textSecondary}
+            />
+            <RefreshButton onPress={fetchData} loading={loading} />
+          </View>
         </View>
+        
+        <CardList
+          data={data}
+          columns={columns}
+          loading={loading}
+          emptyMessage={
+            getUserRole() === 'beneficiario' 
+              ? "No tienes clases programadas" 
+              : getUserRole() === 'profesor'
+              ? "No tienes clases asignadas"
+              : "No hay programación de clases disponible"
+          }
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onCardPress={handleCardPress}
+        />
+        
+        <HorariosModal
+          visible={modalVisible}
+          onClose={closeModal}
+          curso={selectedCurso}
+          horarios={selectedHorarios}
+        />
       </View>
-      
-      <CardList
-        data={data}
-        columns={columns}
-        loading={loading}
-        emptyMessage={
-          getUserRole() === 'beneficiario' 
-            ? "No tienes clases programadas" 
-            : getUserRole() === 'profesor'
-            ? "No tienes clases asignadas"
-            : "No hay programación de clases disponible"
-        }
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onCardPress={handleCardPress}
-      />
-      
-      <HorariosModal
-        visible={modalVisible}
-        onClose={closeModal}
-        curso={selectedCurso}
-        horarios={selectedHorarios}
-      />
-    </View>
+    </>
   );
 };
 

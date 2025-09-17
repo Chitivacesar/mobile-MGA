@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TextInput } from 'react-native';
-import { colors, spacing, typography, radii, shadows } from '@/constants/theme';
 import CardList from '@/components/CardList';
-import RefreshButton from '@/components/RefreshButton';
 import HorariosProfesorModal from '@/components/HorariosProfesorModal';
-import { api } from '@/shared/services/api';
+import RefreshButton from '@/components/RefreshButton';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/shared/contexts/AuthContext';
+import { api } from '@/shared/services/api';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 const ProgramacionProfesoresScreen = () => {
   const [data, setData] = useState<any[]>([]);
@@ -33,7 +33,7 @@ const ProgramacionProfesoresScreen = () => {
     try {
       console.log('ProgramacionProfesoresScreen: Starting to fetch programacion de profesores...');
       setLoading(true);
-      const response = await api.get('/programacion_de_profesores');
+      const response = await api.get('/api/programacion_de_profesores');
       
       console.log('ProgramacionProfesoresScreen: API response received:', response);
       
@@ -61,7 +61,7 @@ const ProgramacionProfesoresScreen = () => {
       if (user?.rol?.nombre?.toLowerCase() === 'beneficiario') {
         // Para beneficiarios, filtrar solo las programaciones asociadas
         console.log('ProgramacionProfesoresScreen: Beneficiario detected, filtering programaciones...');
-        const programacionesClases = await api.get('/programacion_de_clases');
+        const programacionesClases = await api.get('/api/programacion_de_clases');
         const beneficiarioId = user.id;
         
         console.log('ProgramacionProfesoresScreen: Beneficiario ID:', beneficiarioId);

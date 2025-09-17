@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput } from 'react-native';
-import { colors, spacing, typography, radii, shadows } from '@/constants/theme';
 import CardList from '@/components/CardList';
 import RefreshButton from '@/components/RefreshButton';
-import { api } from '@/shared/services/api';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/shared/contexts/AuthContext';
+import { Pago, pagosService } from '@/shared/services/pagos';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 const PagosScreen = () => {
   const { user, token, getUserRole } = useAuth();
@@ -42,147 +42,90 @@ const PagosScreen = () => {
 
   const fetchData = async () => {
     try {
+      console.log('PagosScreen: Starting to fetch pagos...');
       setLoading(true);
-      console.log('PagosScreen: Iniciando fetch de pagos...');
-      console.log('PagosScreen: Usuario actual:', user);
-      console.log('PagosScreen: Token del contexto:', token);
-      console.log('PagosScreen: Token en API service:', (api as any).token);
-      
-      // Verificar si el token está configurado en axios
-      const axios = require('axios');
-      console.log('PagosScreen: Headers de axios global:', axios.defaults.headers.common);
-      
-      const response = await api.get('/pagos');
-      console.log('PagosScreen: Respuesta completa de la API:', response);
-      
-      // Validar estructura de respuesta
-      let pagosList;
-      if (Array.isArray(response)) {
-        pagosList = response;
-        console.log('PagosScreen: Respuesta es array directo, pagosList:', pagosList);
-      } else if (response && response.pagos && Array.isArray(response.pagos)) {
-        pagosList = response.pagos;
-        console.log('PagosScreen: Respuesta tiene propiedad pagos, pagosList:', pagosList);
-      } else if (response && response.data && Array.isArray(response.data)) {
-        pagosList = response.data;
-        console.log('PagosScreen: Respuesta tiene propiedad data, pagosList:', pagosList);
-      } else {
-        console.log('PagosScreen: No se pudo extraer lista de pagos de la respuesta:', response);
-        setData([]);
-        return;
-      }
-      
-      // Filtrar pagos según el rol del usuario logueado
-      let filteredPagos = pagosList;
-      console.log('PagosScreen: Total de pagos antes del filtro:', pagosList.length);
-      console.log('PagosScreen: Rol del usuario:', getUserRole());
-      console.log('PagosScreen: Usuario:', user);
-      
-      if (getUserRole() === 'cliente' && user) {
-        filteredPagos = pagosList.filter((pago: any) => {
-          const beneficiarioData = pago.ventas?.beneficiario;
-          
-          if (!beneficiarioData) {
-            return false;
-          }
-          
-          // Verificar el clienteId del beneficiario
-          const clienteId = beneficiarioData.clienteId;
-          const clienteData = beneficiarioData.cliente;
-          
-          // Criterio 1: clienteId directo
-          if (clienteId && (
-            clienteId === user.id || 
-            clienteId.toString() === user.id.toString() ||
-            clienteId === user.id.toString() ||
-            clienteId.toString() === user.id
-          )) {
-            return true;
-          }
-          
-          // Criterio 2: cliente object comparison
-          if (clienteData) {
-            const clienteMatchesId = clienteData._id === user.id || clienteData.id === user.id;
-            const clienteMatchesName = (clienteData.nombre === user.nombre && clienteData.apellido === user.apellido);
-            const clienteMatchesEmail = clienteData.correo === user.correo || clienteData.email === user.correo;
-            
-            if (clienteMatchesId || clienteMatchesName || clienteMatchesEmail) {
-              return true;
-            }
-          }
-          
-          return false;
-        });
-      } else if (getUserRole() === 'beneficiario' && user) {
-        filteredPagos = pagosList.filter((pago: any) => {
-          const beneficiarioData = pago.ventas?.beneficiario;
-          
-          if (!beneficiarioData) {
-            return false;
-          }
-          
-          // Múltiples criterios de comparación
-          const matchesId = beneficiarioData._id === user.id || beneficiarioData.id === user.id;
-          const matchesEmail = beneficiarioData.correo === user.correo || beneficiarioData.email === user.correo;
-          const matchesDocument = beneficiarioData.numero_de_documento === (user as any).numeroDocumento;
-          const matchesName = (beneficiarioData.nombre === user.nombre && beneficiarioData.apellido === user.apellido);
-          
-          return matchesId || matchesEmail || matchesDocument || matchesName;
-        });
-        console.log('PagosScreen: Pagos filtrados para cliente:', filteredPagos.length);
-      } else if (getUserRole() === 'beneficiario' && user) {
-        filteredPagos = pagosList.filter((pago: any) => {
-          const beneficiarioData = pago.ventas?.beneficiario;
-          
-          if (!beneficiarioData) {
-            return false;
-          }
-          
-          // Múltiples criterios de comparación
-          const matchesId = beneficiarioData._id === user.id || beneficiarioData.id === user.id;
-          const matchesEmail = beneficiarioData.correo === user.correo || beneficiarioData.email === user.correo;
-          const matchesDocument = beneficiarioData.numero_de_documento === (user as any).numeroDocumento;
-          const matchesName = (beneficiarioData.nombre === user.nombre && beneficiarioData.apellido === user.apellido);
-          
-          return matchesId || matchesEmail || matchesDocument || matchesName;
-        });
-        console.log('PagosScreen: Pagos filtrados para beneficiario:', filteredPagos.length);
-      } else {
-        console.log('PagosScreen: Usuario admin, mostrando todos los pagos');
-      }
-      
-      console.log('PagosScreen: Pagos finales después del filtro:', filteredPagos.length);
-      
-      // Procesar datos
-      const processedData = filteredPagos.map((pago: any) => {
-        // Obtener nombre del beneficiario
-        let beneficiarioNombre = 'N/A';
-        if (pago.ventas?.beneficiario?.nombre) {
-          beneficiarioNombre = `${pago.ventas.beneficiario.nombre} ${pago.ventas.beneficiario.apellido || ''}`;
-        }
 
-        const basePago = {
-          codigoVenta: pago.ventas?.codigoVenta || 'N/A',
-          metodoPago: pago.metodoPago || 'N/A',
-          valorTotal: pago.valor_total ? `$${pago.valor_total.toLocaleString()}` : 'N/A',
-          estado: pago.estado || 'N/A',
-          fechaPago: pago.fechaPago ? new Date(pago.fechaPago).toLocaleDateString() : 'N/A',
-          descripcion: pago.descripcion || 'N/A',
-        };
+      const pagosData = await pagosService.list();
+      console.log('PagosScreen: API response received:', pagosData);
+
+      if (pagosData && Array.isArray(pagosData)) {
+        // Filtrar pagos según el rol del usuario logueado
+        let filteredPagos = pagosData;
+        console.log('PagosScreen: Total de pagos antes del filtro:', pagosData.length);
+        console.log('PagosScreen: Rol del usuario:', getUserRole());
+        console.log('PagosScreen: Usuario:', user);
         
-        // Solo agregar beneficiario si no es beneficiario logueado
-        return getUserRole() !== 'beneficiario' ? {
-          ...basePago,
-          beneficiario: beneficiarioNombre,
-        } : basePago;
-      });
+        if (getUserRole() === 'cliente' && user) {
+          // Para clientes, filtrar por ventas relacionadas
+          filteredPagos = pagosData.filter((pago: Pago) => {
+            // Aquí podrías implementar lógica específica para filtrar por cliente
+            // Por ahora mostramos todos los pagos
+            return true;
+          });
+        } else if (getUserRole() === 'beneficiario' && user) {
+          // Para beneficiarios, filtrar por ventas relacionadas
+          filteredPagos = pagosData.filter((pago: Pago) => {
+            // Aquí podrías implementar lógica específica para filtrar por beneficiario
+            // Por ahora mostramos todos los pagos
+            return true;
+          });
+        } else {
+          console.log('PagosScreen: Usuario admin, mostrando todos los pagos');
+        }
+        
+        console.log('PagosScreen: Pagos finales después del filtro:', filteredPagos.length);
+        
+        // Procesar datos
+        const processedData = filteredPagos.map((pago: Pago | any) => {
+          // La API puede retornar la venta relacionada como ventaId | venta | ventas
+          const venta = (pago as any).ventaId || (pago as any).venta || (pago as any).ventas || {};
+          const beneficiario = venta?.beneficiarioId || venta?.beneficiario;
+          const beneficiarioNombre = beneficiario
+            ? `${beneficiario.nombre || ''} ${beneficiario.apellido || ''}`.trim() || 'N/A'
+            : 'N/A';
 
-      console.log('PagosScreen: Datos procesados finales:', processedData);
-      setData(processedData);
-    } catch (error) {
+          const codigoVenta = venta?.codigoVenta || (typeof (pago as any).codigoVenta === 'string' ? (pago as any).codigoVenta : undefined) || 'N/A';
+          const total = typeof venta?.valor_total === 'number' ? venta.valor_total : (typeof (pago as any).monto === 'number' ? (pago as any).monto : undefined);
+          const descripcionPago = (pago as any).observaciones || (pago as any).descripcion || venta?.observaciones || 'N/A';
+
+          const basePago = {
+            codigoVenta: codigoVenta,
+            metodoPago: (pago as any).metodoPago || 'N/A',
+            valorTotal: typeof total === 'number' ? `$${total.toLocaleString('es-CO', { minimumFractionDigits: 2 })}` : 'N/A',
+            estado: (pago as any).estado || 'N/A',
+            fechaPago: (pago as any).fechaPago ? new Date((pago as any).fechaPago).toLocaleDateString('es-CO') : 'N/A',
+            descripcion: descripcionPago,
+          };
+
+          // Mostrar beneficiario en vista admin/otros roles
+          return getUserRole() !== 'beneficiario' ? {
+            ...basePago,
+            beneficiario: beneficiarioNombre,
+          } : basePago;
+        });
+
+        console.log('PagosScreen: Datos procesados finales:', processedData);
+        setData(processedData);
+      } else {
+        console.log('PagosScreen: No data received or invalid format');
+        setData([]);
+      }
+    } catch (error: any) {
       console.error('PagosScreen: Error fetching pagos:', error);
+      
+      // Mostrar mensaje de error más específico
+      if (error.message?.includes('Timeout')) {
+        console.error('Timeout error - servidor muy lento');
+      } else if (error.code === 'ECONNABORTED') {
+        console.error('Connection timeout');
+      } else {
+        console.error('Other error:', error.message);
+      }
+      
+      setData([]);
     } finally {
       setLoading(false);
+      console.log('PagosScreen: Fetch completed, loading set to false');
     }
   };
 

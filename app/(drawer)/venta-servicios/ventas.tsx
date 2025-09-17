@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet, Text, ScrollView, TextInput, TouchableOpacity, Modal } from 'react-native';
-import { colors, spacing, radii, typography, shadows } from '@/constants/theme';
-import { MaterialIcons } from '@expo/vector-icons';
 import RefreshButton from '@/components/RefreshButton';
-import { api } from '@/shared/services/api';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { ventasService } from '@/shared/services/ventas';
+import { MaterialIcons } from '@expo/vector-icons';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const VentasScreen = () => {
   const [ventasAll, setVentasAll] = useState<any[]>([]);
@@ -58,8 +58,8 @@ const VentasScreen = () => {
       console.log('VentasScreen: Starting to fetch ventas...');
       setLoading(true);
       
-      // Obtener todas las ventas de la API
-      const ventasData = await api.get('/ventas');
+      // Solicitud directa (el servicio ya maneja un timeout amplio)
+      const ventasData = await ventasService.list();
       
       console.log('VentasScreen: API response received:', ventasData);
       
@@ -72,8 +72,18 @@ const VentasScreen = () => {
         setVentasCursos([]);
         setVentasMatriculas([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('VentasScreen: Error fetching ventas:', error);
+      
+      // Mostrar mensaje de error más específico
+      if (error.message?.includes('Timeout')) {
+        console.error('Timeout error - servidor muy lento');
+      } else if (error.code === 'ECONNABORTED') {
+        console.error('Connection timeout');
+      } else {
+        console.error('Other error:', error.message);
+      }
+      
       setVentasAll([]);
       setVentasCursos([]);
       setVentasMatriculas([]);
@@ -104,8 +114,8 @@ const VentasScreen = () => {
       if (!d) return false; // si no hay fecha, excluir del periodo
       return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth;
     };
-    const cursos = ventasAll.filter((v: any) => v.codigoVenta?.startsWith('CU-') && isInSelectedPeriod(v));
-    const matriculas = ventasAll.filter((v: any) => v.codigoVenta?.startsWith('MA-') && isInSelectedPeriod(v));
+    const cursos = ventasAll.filter((v: any) => v.codigoVenta?.startsWith('CU-') && v.estado === 'vigente' && isInSelectedPeriod(v));
+    const matriculas = ventasAll.filter((v: any) => v.codigoVenta?.startsWith('MA-') && v.estado === 'vigente' && isInSelectedPeriod(v));
     setVentasCursos(cursos);
     setVentasMatriculas(matriculas);
   }, [ventasAll, selectedYear, selectedMonth]);
@@ -121,9 +131,9 @@ const VentasScreen = () => {
     setSelectedMonth(date.getMonth());
   };
 
+  // Solo refiltrar en memoria al cambiar periodo (sin volver a llamar a la API)
   useEffect(() => {
-    // refiltrar datos al cambiar periodo
-    fetchData();
+    // no hacer fetch adicional aquí
   }, [selectedYear, selectedMonth]);
 
   const CardVenta = ({ titulo, total, icono, color, cantidad }: { titulo: string, total: number, icono: string, color: string, cantidad: number }) => (

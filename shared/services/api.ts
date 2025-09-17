@@ -1,5 +1,5 @@
+import { API_BASE_URL, API_CONFIG } from '@/constants/config';
 import axios from 'axios';
-import { API_BASE_URL, API_CONFIG, ALTERNATIVE_URLS } from '@/constants/config';
 
 export class ApiService {
   private static instance: ApiService;
@@ -10,15 +10,23 @@ export class ApiService {
       return ApiService.instance;
     }
 
+    console.log('🔧 ApiService constructor - API_BASE_URL:', API_BASE_URL);
     this.configureAxios();
     ApiService.instance = this;
   }
 
   private configureAxios() {
-    // Configuración mejorada de axios
+    // Configuración optimizada de axios
+    console.log('🔧 Configuring Axios with baseURL:', API_BASE_URL);
     axios.defaults.baseURL = API_BASE_URL;
     axios.defaults.timeout = API_CONFIG.timeout;
     axios.defaults.headers.common['Content-Type'] = 'application/json';
+    
+    // Configuraciones adicionales para mejor rendimiento
+    axios.defaults.maxRedirects = 3;
+    axios.defaults.validateStatus = (status) => status < 500; // No lanzar error para códigos 4xx
+    
+    console.log('🔧 Axios configured. Current baseURL:', axios.defaults.baseURL);
     
     // Interceptor para manejar errores de conexión
     axios.interceptors.response.use(
@@ -88,55 +96,42 @@ export class ApiService {
     }
   }
 
-  // Login con reintentos y URLs alternativas
+  // Login optimizado con reintentos rápidos
   async login(correo: string, contrasena: string) {
     const loginData = { correo, contrasena };
     
-    console.log('=== ENHANCED LOGIN ===');
-    console.log('Email:', correo);
-    console.log('Password length:', contrasena?.length);
+    console.log('🚀 LOGIN ATTEMPT');
+    console.log('📧 Email:', correo);
+    console.log('🌐 URL:', API_BASE_URL);
     
-    // Primero intenta con la URL configurada
-    try {
-      console.log('Trying primary URL:', `${API_BASE_URL}/login`);
-      const response = await this.makeLoginRequest('/login', loginData);
-      console.log('Primary URL successful!');
-      return response;
-    } catch (primaryError: any) {
-      console.log('Primary URL failed:', primaryError.message);
-      
-      // Si falla, intenta con URLs alternativas
-      for (let i = 0; i < ALTERNATIVE_URLS.length; i++) {
-        const altUrl = ALTERNATIVE_URLS[i];
-        if (altUrl === API_BASE_URL) continue; // Skip if it's the same as primary
+    // Intentar con timeout más corto primero
+    const quickTimeout = 3000; // 3 segundos
+    const maxRetries = 1;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Intento ${attempt}/${maxRetries}`);
         
-        try {
-          console.log(`Trying alternative URL ${i + 1}:`, altUrl);
-          
-          // Temporalmente cambia la baseURL
-          const originalBaseURL = axios.defaults.baseURL;
-          axios.defaults.baseURL = altUrl;
-          
-          const response = await this.makeLoginRequest('/login', loginData);
-          
-          console.log(`Alternative URL ${i + 1} successful!`);
-          console.log('Consider updating your config to use:', altUrl);
-          
-          // Restaura la baseURL original
-          axios.defaults.baseURL = originalBaseURL;
-          
-          return response;
-        } catch (altError: any) {
-          console.log(`Alternative URL ${i + 1} failed:`, altError.message);
-          // Restaura la baseURL original antes de continuar
-          axios.defaults.baseURL = API_BASE_URL;
+        const response = await this.makeLoginRequestWithTimeout('/api/login', loginData, quickTimeout);
+        console.log('✅ Login successful!');
+        return response;
+        
+      } catch (error: any) {
+        console.log(`❌ Intento ${attempt} falló:`, error.message);
+        
+        // Si es el último intento, lanza el error
+        if (attempt === maxRetries) {
+          if (error.code === 'ECONNABORTED') {
+            throw new Error('Timeout: El servidor está tardando mucho en responder. Verifica que el backend esté funcionando y tu conexión a internet.');
+          } else if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+            throw new Error('No se puede conectar al servidor. Verifica tu conexión a internet.');
+          }
+          throw error;
         }
+        
+        // Esperar un poco antes del siguiente intento
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-      
-      // Si todas las URLs fallan, lanza el error original
-      console.error('All URLs failed. Original error:');
-      this.logDetailedError(primaryError);
-      throw primaryError;
     }
   }
   
@@ -147,13 +142,21 @@ export class ApiService {
     return response.data;
   }
   
+  private async makeLoginRequestWithTimeout(endpoint: string, data: any, timeout: number) {
+    const response = await axios.post(endpoint, data, { timeout });
+    console.log('Server response status:', response.status);
+    console.log('Server response data:', response.data);
+    return response.data;
+  }
+  
   private logDetailedError(error: any) {
-    console.error('=== LOGIN ERROR DETAILS ===');
-    console.error('Error message:', error.message);
-    console.error('Error code:', error.code);
-    console.error('Response status:', error.response?.status);
-    console.error('Response data:', error.response?.data);
-    console.error('Config URL:', error.config?.url);
+    console.error('=== ERROR DETAILS ===');
+    console.error('Message:', error.message);
+    console.error('Code:', error.code);
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Data:', error.response.data);
+    }
   }
 
   // Recuperar contraseña
@@ -162,7 +165,7 @@ export class ApiService {
       console.log('=== FORGOT PASSWORD ===');
       console.log('Email:', email);
       
-      const response = await axios.post('/password-reset/forgot-password', {
+      const response = await axios.post('/api/password-reset/forgot-password', {
         email: email,
       });
 
@@ -186,7 +189,7 @@ export class ApiService {
       console.log('=== RESET PASSWORD ===');
       console.log('Token:', token ? token.substring(0, 20) + '...' : 'null');
       
-      const response = await axios.post('/password-reset/reset-password', {
+      const response = await axios.post('/api/password-reset/reset-password', {
         token: token,
         newPassword: newPassword,
       });
@@ -211,7 +214,7 @@ export class ApiService {
       console.log('=== VERIFY RESET TOKEN ===');
       console.log('Token:', token ? token.substring(0, 20) + '...' : 'null');
       
-      const response = await axios.get(`/password-reset/verify-token/${token}`);
+      const response = await axios.get(`/api/password-reset/verify-token/${token}`);
 
       console.log('Verify token response:', response.data);
       return {

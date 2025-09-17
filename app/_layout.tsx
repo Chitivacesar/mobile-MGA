@@ -1,9 +1,13 @@
+// useFonts funciona mejor con require() para assets
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
 import 'react-native-gesture-handler';
+import 'react-native-reanimated';
+
+// Polyfill para Reanimated en web
+import '../polyfills/reanimated-web-polyfill';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '@/shared/contexts/AuthContext';
