@@ -1,0 +1,44 @@
+{
+  "cli": {
+    "version": ">= 16.19.3",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "gradleCommand": ":app:assembleDebug"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_USE_LATEST_GRADLE_VERSION": "true"
+      },
+      "cache": {
+        "key": "eas-build-pre-1"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_USE_LATEST_GRADLE_VERSION": "true"
+      },
+      "cache": {
+        "key": "eas-build-prod-1"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

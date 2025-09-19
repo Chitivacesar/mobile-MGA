@@ -8,10 +8,13 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 const AsistenciaScreen = () => {
-  const { user } = useAuth();
+  const { user, getUserRole } = useAuth();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  console.log('AsistenciaScreen: Rendering with', data.length, 'asistencias, loading:', loading);
+  console.log('AsistenciaScreen: Current user:', user?.nombre, 'Role:', getUserRole());
 
   const columns = [
     { key: 'curso', label: 'Curso' },
@@ -24,13 +27,121 @@ const AsistenciaScreen = () => {
     try {
       setLoading(true);
       console.log('AsistenciaScreen: Iniciando fetch de asistencias...');
+      console.log('AsistenciaScreen: Current user data:', user);
+      console.log('AsistenciaScreen: User role:', getUserRole());
+      
       const resp = await api.get('/api/asistencias');
       console.log('AsistenciaScreen: Respuesta completa:', resp);
       
       const list = Array.isArray(resp) ? resp : ((resp as any)?.asistencias || (resp as any)?.data || []);
-      console.log('AsistenciaScreen: Lista de asistencias:', list.length);
+      console.log('AsistenciaScreen: Lista de asistencias antes del filtro:', list.length);
 
-      const processed = list.map((a: any) => {
+      // Filtrar asistencias según el rol del usuario
+      let filteredAsistencias = list;
+      
+      if (getUserRole() === 'profesor' && user) {
+        console.log('AsistenciaScreen: 🎯 ENTRANDO AL FILTRO DE PROFESOR');
+        console.log('AsistenciaScreen: Filtering for profesor with user data:', {
+          id: user.id,
+          correo: user.correo,
+          nombre: user.nombre,
+          role: getUserRole(),
+          totalAsistenciasBeforeFilter: list.length
+        });
+        
+        filteredAsistencias = list.filter((asistencia: any) => {
+          // Verificar si la asistencia pertenece a una clase del profesor logueado
+          const programacionClase = asistencia.programacionClaseId;
+          
+          if (!programacionClase || !programacionClase.programacionProfesor) {
+            console.log('AsistenciaScreen: No programacion data found, excluding this asistencia');
+            return false;
+          }
+          
+          const profesorData = programacionClase.programacionProfesor.profesor;
+          
+          if (!profesorData) {
+            console.log('AsistenciaScreen: No profesor data found, excluding this asistencia');
+            return false;
+          }
+          
+          // Datos del profesor de la clase
+          const profesorId = profesorData._id || profesorData.id;
+          const profesorFullName = `${profesorData.nombres || profesorData.nombre} ${profesorData.apellidos || profesorData.apellido}`;
+          const userFullName = `${user.nombre} ${user.apellido}`;
+          
+          // Solo usar ID y nombre como criterios seguros
+          const matchesId = profesorId && profesorId === user.id;
+          const matchesName = profesorFullName.toLowerCase().trim() === userFullName.toLowerCase().trim();
+          
+          // Filtro conservador: Solo ID o nombre exacto
+          const isAssigned = matchesId || matchesName;
+          
+          console.log('🔍 DETAILED COMPARISON:', {
+            profesorName: profesorFullName,
+            userName: userFullName,
+            profesorId: profesorId,
+            userId: user.id,
+            matchesId: matchesId,
+            matchesName: matchesName,
+            FINAL_RESULT: isAssigned
+          });
+          
+          if (isAssigned) {
+            console.log('AsistenciaScreen: ✅ ASISTENCIA INCLUIDA - Pertenece al profesor logueado');
+          } else {
+            console.log('AsistenciaScreen: ❌ ASISTENCIA EXCLUIDA - No pertenece al profesor logueado');
+          }
+          
+          return isAssigned;
+        });
+        
+        console.log('AsistenciaScreen: Filtered asistencias for profesor:', filteredAsistencias.length);
+      } else if (getUserRole() === 'beneficiario' && user) {
+        console.log('AsistenciaScreen: Filtering for beneficiario with user data:', {
+          id: user.id,
+          correo: user.correo,
+          numeroDocumento: (user as any).numeroDocumento,
+          nombre: user.nombre
+        });
+        
+        filteredAsistencias = list.filter((asistencia: any) => {
+          // Verificar si la asistencia pertenece al beneficiario logueado
+          const beneficiarioData = asistencia.ventaId?.beneficiarioId;
+          
+          if (!beneficiarioData) {
+            console.log('AsistenciaScreen: No beneficiario data found');
+            return false;
+          }
+          
+          // Múltiples criterios de comparación
+          const matchesId = beneficiarioData._id === user.id || beneficiarioData.id === user.id;
+          const matchesEmail = beneficiarioData.correo === user.correo || beneficiarioData.email === user.correo;
+          const matchesDocument = beneficiarioData.numero_de_documento === (user as any).numeroDocumento;
+          const matchesName = (beneficiarioData.nombre === user.nombre && beneficiarioData.apellido === user.apellido);
+          
+          const isMatch = matchesId || matchesEmail || matchesDocument || matchesName;
+          
+          console.log('AsistenciaScreen: Beneficiario comparison:', {
+            beneficiarioId: beneficiarioData._id,
+            beneficiarioEmail: beneficiarioData.correo || beneficiarioData.email,
+            beneficiarioDocument: beneficiarioData.numero_de_documento,
+            beneficiarioName: `${beneficiarioData.nombre} ${beneficiarioData.apellido}`,
+            userInfo: `${user.nombre} ${user.apellido}`,
+            matchesId,
+            matchesEmail,
+            matchesDocument,
+            matchesName,
+            finalMatch: isMatch
+          });
+          
+          return isMatch;
+        });
+        
+        console.log('AsistenciaScreen: Filtered asistencias for beneficiario:', filteredAsistencias.length);
+      }
+
+      const processed = filteredAsistencias.map((a: any) => {
         // Extraer datos del beneficiario desde ventaId
         const beneficiario = a.ventaId?.beneficiarioId;
         const beneficiarioNombre = beneficiario ? 
@@ -67,7 +178,10 @@ const AsistenciaScreen = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, [user]);
+  useEffect(() => {
+    console.log('AsistenciaScreen: useEffect triggered, fetching data...');
+    fetchData();
+  }, [user]);
 
   return (
     <>
@@ -104,7 +218,13 @@ const AsistenciaScreen = () => {
           data={data}
           columns={columns}
           loading={loading}
-          emptyMessage={'No hay registros de asistencia'}
+          emptyMessage={
+            getUserRole() === 'beneficiario' 
+              ? "No tienes registros de asistencia" 
+              : getUserRole() === 'profesor'
+              ? "No hay registros de asistencia para tus clases"
+              : "No hay registros de asistencia"
+          }
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
         />
@@ -142,5 +262,3 @@ const styles = StyleSheet.create({
 });
 
 export default AsistenciaScreen;
-
-

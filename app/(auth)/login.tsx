@@ -2,16 +2,16 @@ import { colors, spacing } from '@/constants/theme';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export default function LoginScreen() {
@@ -62,10 +62,6 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleForgotPassword = () => {
-    router.push('/(auth)/forgot-password');
   };
 
   return (
@@ -135,16 +131,6 @@ export default function LoginScreen() {
               ) : (
                 <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
               )}
-            </TouchableOpacity>
-
-            {/* Enlace de Olvidé mi contraseña */}
-            <TouchableOpacity
-              style={styles.forgotPasswordButton}
-              onPress={handleForgotPassword}
-            >
-              <Text style={styles.forgotPasswordText}>
-                ¿Olvidaste tu contraseña?
-              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -235,13 +221,5 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
-  },
-  forgotPasswordButton: {
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  forgotPasswordText: {
-    color: colors.primary,
-    fontSize: 14,
   },
 });
